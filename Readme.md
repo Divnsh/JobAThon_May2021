@@ -82,8 +82,9 @@ The ROC and PR curves are plotted for each model and saved in the **plots** dire
 * *Stacking*
     * A stacking classifier (XGBoost classifier) is trained on the outputs of these 3 models.
         * Evaluation is performed with 5-fold cross-validation.
-        * Average ROC AUC is .
-        * Performance metrics on the whole dataset: 
+        * 5-fold training and predictions taking too long.
+        * Making predictions on 3-fold probabilty predictions.
+
     * Finally, predictions are made for the pre-processed test data and saved in the file [**submission.csv**](submission.csv).<br/><br/>
 
 

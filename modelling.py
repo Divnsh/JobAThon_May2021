@@ -11,7 +11,7 @@ from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score
 import warnings
 from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import StackingClassifier
+from mlxtend.classifier import StackingCVClassifier
 import joblib # saving intermediate results
 
 warnings.filterwarnings('ignore')
@@ -277,29 +277,23 @@ print(metrics) # {'ROC_AUC': 0.8738893457789153, 'F1_micro': 0.8608810662325771,
 
 
 ## Stacking all models and performing K-fold CV
-estimators = [('logistic', LogisticRegression(C=10,class_weight='balanced', solver='liblinear', penalty='l2')),
-              ('xgboost',xgclassifier),
-              ('mlp',mlpclf)]
+skf=StratifiedKFold(n_splits=3,shuffle=True, random_state=2021)
 
-sclf = StackingClassifier(estimators= estimators , final_estimator=XGBClassifier(n_estimators=100,eval_metric='auc'))
+estimators = [LogisticRegression(C=10,class_weight='balanced', solver='liblinear', penalty='l2'),
+              XGBClassifier(n_estimators=100,eval_metric='auc', min_child_weight=5, gamma=5, subsample=0.8,
+              colsample_bytree=0.8, max_depth=4),
+              MLPClassifier(max_iter=300,batch_size='auto',shuffle=True, random_state=2021, verbose=False,
+                     early_stopping=False, activation='relu', alpha=0.05, learning_rate='constant', solver='adam')]
 
+sclf = StackingCVClassifier(classifiers= estimators , use_probas=True,
+                          meta_classifier=XGBClassifier(), cv=skf)
 
-params = {'mlp__activation': ['relu'],
-        'mlp__alpha':[0.05],
-        'mlp__hidden_layer_sizes':[(50, 30, 10)],
-        'mlp__learning_rate':['constant'],
-        'mlp__solver':['adam'],
-        'xgboost__min_child_weight': [5], 
-        'xgboost__gamma': [5], 
-        'xgboost__subsample': [0.8],
-        'xgboost__colsample_bytree': [0.8],
-        'xgboost__max_depth': [4]}
- 
-stacked = GridSearchCV(estimator=sclf, param_grid=params, cv=StratifiedKFold(n_splits=5,shuffle=True,
-                    random_state=2021), scoring='roc_auc')
-stacked.fit(X_train, Y_train.iloc[:,0].values)
-print(stacked.best_score_) # Best average score: 
-metrics=get_metrics(stacked,train,Y_train.iloc[:,1].values,kind='_stacked') # Metrics on whole train data
+scores=cross_val_score(sclf, X_train, Y_train.iloc[:,0], cv=skf, scoring='roc_auc')
+print("Average ROC AUC: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std()))
+
+stacked = sclf.fit(X_train, Y_train.iloc[:,0])
+joblib.dump(stacked,'models/final_model.pkl') 
+metrics=get_metrics(stacked,X_train,Y_train.iloc[:,0].values,kind='_stacked') # Metrics on whole train data
 print(metrics)
 
 
