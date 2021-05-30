@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=https://datahack.analyticsvidhya.com/
+HostUrl=https://datahack-prod.s3.amazonaws.com/train_file/train_s3TEQDk.csv
